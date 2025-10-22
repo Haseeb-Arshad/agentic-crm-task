@@ -1,0 +1,2 @@
+[console_scripts]
+ai-crm-automation = ai_crm_automation.main:main

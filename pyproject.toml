@@ -1,0 +1,32 @@
+[project]
+name = "ai-crm-automation"
+version = "0.1.0"
+description = "AI-powered HubSpot CRM automation orchestrated with LangChain agents."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT" }
+authors = [
+  { name = "AI CRM Automation Maintainers" }
+]
+dependencies = [
+  "aiohttp>=3.9.5,<4.0.0",
+  "aiosmtplib>=2.0.2,<3.0.0",
+  "email-validator>=2.1.0",
+  "langchain>=0.2.11,<0.3.0",
+  "langchain-openai>=0.1.17,<0.2.0",
+  "pydantic>=2.7,<3.0",
+  "tenacity>=8.2.3,<9.0"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9.0",
+  "pytest-asyncio>=0.23,<0.24",
+  "ruff>=0.4.8,<0.5"
+]
+
+[project.scripts]
+ai-crm-automation = "ai_crm_automation.main:main"
+
+[tool.uv]
+package = true

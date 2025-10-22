@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+ai_crm_automation/config.json
+uv.lock
