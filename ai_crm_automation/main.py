@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 def _config_from_env() -> Optional[Dict[str, Any]]:
     openai_key = os.getenv("OPENAI_API_KEY")
-    hubspot_key = os.getenv("HUBSPOT_API_KEY")
+    hubspot_key = os.getenv("HUBSPOT_API_KEY") or os.getenv("HUBSPOT_ACCESS_TOKEN")
     email_provider = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
     from_email = os.getenv("EMAIL_FROM_EMAIL")
 
@@ -95,9 +95,7 @@ def load_config() -> Dict[str, Any]:
         return json.load(f)
 
 
-async def async_main(user_query: Optional[str]) -> int:
-    config = load_config()
-
+def init_agents(config: Dict[str, Any]) -> tuple[HubSpotAgent, EmailAgent, OrchestratorAgent]:
     openai_key = config["openai"]["api_key"]
     openai_model = config["openai"].get("model", "gpt-4o-mini")
 
@@ -115,6 +113,12 @@ async def async_main(user_query: Optional[str]) -> int:
         hubspot=hubspot_agent,
         email=email_agent,
     )
+    return hubspot_agent, email_agent, orchestrator
+
+
+async def async_main(user_query: Optional[str]) -> int:
+    config = load_config()
+    hubspot_agent, email_agent, orchestrator = init_agents(config)
 
     query = user_query
     if not query:

@@ -12,10 +12,12 @@ dependencies = [
   "aiohttp>=3.9.5,<4.0.0",
   "aiosmtplib>=2.0.2,<3.0.0",
   "email-validator>=2.1.0",
+  "fastapi>=0.115.0,<0.116.0",
   "langchain>=0.2.11,<0.3.0",
   "langchain-openai>=0.1.17,<0.2.0",
   "pydantic>=2.7,<3.0",
-  "tenacity>=8.2.3,<9.0"
+  "tenacity>=8.2.3,<9.0",
+  "uvicorn[standard]>=0.30.0,<0.31.0"
 ]
 
 [project.optional-dependencies]
@@ -27,6 +29,9 @@ dev = [
 
 [project.scripts]
 ai-crm-automation = "ai_crm_automation.main:main"
+
+[tool.setuptools]
+packages = ["ai_crm_automation"]
 
 [tool.uv]
 package = true

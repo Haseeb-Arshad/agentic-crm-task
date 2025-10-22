@@ -1,6 +1,8 @@
+README.md
 pyproject.toml
 ai_crm_automation/__init__.py
 ai_crm_automation/main.py
+ai_crm_automation/server.py
 ai_crm_automation.egg-info/PKG-INFO
 ai_crm_automation.egg-info/SOURCES.txt
 ai_crm_automation.egg-info/dependency_links.txt

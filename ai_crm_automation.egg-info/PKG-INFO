@@ -9,11 +9,125 @@ Description-Content-Type: text/markdown
 Requires-Dist: aiohttp<4.0.0,>=3.9.5
 Requires-Dist: aiosmtplib<3.0.0,>=2.0.2
 Requires-Dist: email-validator>=2.1.0
+Requires-Dist: fastapi<0.116.0,>=0.115.0
 Requires-Dist: langchain<0.3.0,>=0.2.11
 Requires-Dist: langchain-openai<0.2.0,>=0.1.17
 Requires-Dist: pydantic<3.0,>=2.7
 Requires-Dist: tenacity<9.0,>=8.2.3
+Requires-Dist: uvicorn[standard]<0.31.0,>=0.30.0
 Provides-Extra: dev
 Requires-Dist: pytest<9.0,>=8.2; extra == "dev"
 Requires-Dist: pytest-asyncio<0.24,>=0.23; extra == "dev"
 Requires-Dist: ruff<0.5,>=0.4.8; extra == "dev"
+
+# AI CRM Automation Backend
+
+Automate HubSpot CRM tasks with natural language and send confirmation emails without hand-built workflows. This repo provides both a CLI and a FastAPI service that sit on top of LangChain tools for HubSpot and email providers, making it easy to plug in a frontend at `http://localhost:8000`.
+
+---
+
+## Highlights
+- LangChain orchestrator that interprets free text and calls CRM/email tools in the right order.
+- HubSpot agent with idempotent contact creation (409 conflicts reuse existing records) plus deal management.
+- Email agent with Resend by default and optional SendGrid or SMTP.
+- Shared async utilities such as httpx client with retries and JSON structured logging.
+
+```
+ai_crm_automation/
+├─ agents/
+│  ├─ orchestrator_agent.py
+│  ├─ hubspot_agent.py
+│  └─ email_agent.py
+├─ utils/
+│  ├─ api_client.py
+│  ├─ error_handler.py
+│  └─ logger.py
+├─ main.py             # CLI entry
+├─ server.py           # FastAPI app (port 8000)
+├─ config.example.json
+└─ README.md
+```
+
+---
+
+## Required APIs and Keys
+| Service | Purpose | Keys |
+|---------|---------|------|
+| OpenAI  | LLM for intent parsing | `OPENAI_API_KEY` (optional `OPENAI_MODEL`) |
+| HubSpot | CRM contacts/deals     | `HUBSPOT_ACCESS_TOKEN` or `hubspot.api_key` |
+| Resend  | Confirmation emails    | `RESEND_API_KEY`, `email.from_email` verified |
+| SendGrid (optional) | Email alternative | `SENDGRID_API_KEY` |
+| SMTP (optional)     | Email fallback   | host, port, username, password, `use_tls` |
+
+Keep production secrets in `.env` (ignored by git) or your secret manager. Only share `.env.example` and `config.example.json`.
+
+---
+
+## Prerequisites
+- Python 3.11 or 3.12
+- [`uv`](https://docs.astral.sh/uv/) for managing the virtual environment
+- Accounts/API tokens for the services you plan to use
+
+---
+
+## Setup
+1. Install runtime and dependencies
+   ```bash
+   uv python install 3.12
+   uv venv
+   .venv\Scripts\activate      # Windows
+   # source .venv/bin/activate  # macOS/Linux
+   uv sync
+   ```
+2. Configure secrets
+   - Copy `ai_crm_automation/config.example.json` to `ai_crm_automation/config.json` and fill it in, or
+   - Create an `.env` from `.env.example` and optionally set `AI_CRM_CONFIG`.
+   - Minimum environment for default Resend + HubSpot flow:
+     ```env
+     OPENAI_API_KEY=sk-...
+     HUBSPOT_ACCESS_TOKEN=pat-...
+     EMAIL_PROVIDER=resend
+     EMAIL_FROM_EMAIL=no-reply@haseebarshad.me
+     RESEND_API_KEY=re_...
+     ```
+
+---
+
+## Running the CLI
+```bash
+uv run --env-file .env python -m ai_crm_automation.main \
+  "Create contact Jane Doe with email jane@haseebarshad.me and add a deal worth 5000 dollars"
+```
+Omit the argument for interactive mode.
+
+---
+
+## Running the FastAPI Service (port 8000)
+```bash
+uv run --env-file .env uvicorn ai_crm_automation.server:app --host 0.0.0.0 --port 8000
+```
+- `GET /health` -> `{ "status": "ok" }`
+- `POST /run` -> `{ "output": "..." }` with body `{ "prompt": "..." }`
+
+Leave it running to support any frontend or testing client.
+
+---
+
+## Troubleshooting
+- **401 from HubSpot**: token missing scopes or expired. Regenerate a Private App token with contact/deal scopes.
+- **404 on association**: confirm contact and deal IDs exist and the token has association scopes.
+- **Email missing**: verify sender domain and recipient allowlists in Resend/SendGrid/SMTP.
+- **Model errors**: set `OPENAI_MODEL` to an available Chat Completions model or check quotas.
+- **Python 3.13 issues**: stick to Python 3.11/3.12 until dependencies ship wheels.
+
+---
+
+## Developer Notes
+- `.gitignore` already excludes secrets (`.env`, `config.json`), `.venv`, bytecode, and `uv.lock`.
+- Quick syntax check: `uv run --env-file .env python -m compileall ai_crm_automation`.
+- Extend or swap providers by keeping agent method signatures consistent; the orchestrator only depends on tool names.
+
+---
+
+## License
+MIT
