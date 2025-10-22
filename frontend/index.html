@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI CRM Automation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">AI CRM</h1>
+            <p class="subtitle">Intelligent customer relationship management</p>
+        </header>
+
+        <main class="main">
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message system-message">
+                        <div class="message-content">
+                            <p>Welcome to AI CRM! I can help you manage contacts, deals, and send emails. Try asking me something like:</p>
+                            <ul class="suggestions">
+                                <li>"Create a contact for john@example.com"</li>
+                                <li>"Add a new deal worth $5000 for Sarah"</li>
+                                <li>"Update contact info for jane@company.com"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="chatInput" 
+                            placeholder="Describe what you'd like to do with your CRM..."
+                            rows="1"
+                        ></textarea>
+                        <button id="sendButton" class="send-button" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m22 2-7 20-4-9-9-4z"/>
+                                <path d="M22 2 11 13"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <h3>Quick Actions</h3>
+                <div class="action-grid">
+                    <button class="action-card" data-action="create-contact">
+                        <div class="action-icon">👤</div>
+                        <div class="action-text">
+                            <h4>Create Contact</h4>
+                            <p>Add new contact to HubSpot</p>
+                        </div>
+                    </button>
+                    
+                    <button class="action-card" data-action="create-deal">
+                        <div class="action-icon">💼</div>
+                        <div class="action-text">
+                            <h4>Create Deal</h4>
+                            <p>Add new deal opportunity</p>
+                        </div>
+                    </button>
+                    
+                    <button class="action-card" data-action="update-contact">
+                        <div class="action-icon">✏️</div>
+                        <div class="action-text">
+                            <h4>Update Contact</h4>
+                            <p>Modify existing contact</p>
+                        </div>
+                    </button>
+                    
+                    <button class="action-card" data-action="send-email">
+                        <div class="action-icon">📧</div>
+                        <div class="action-text">
+                            <h4>Send Email</h4>
+                            <p>Send confirmation email</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal for quick actions -->
+        <div id="actionModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Action</h3>
+                    <button class="close-button" id="closeModal">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Dynamic content will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading overlay -->
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-spinner"></div>
+            <p>Processing your request...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
