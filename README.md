@@ -1,14 +1,13 @@
-# AI CRM Automation Backend
+# AI CRM Automation
 
-Natural-language automation for HubSpot CRM with confirmation emails. This repository packages a LangChain orchestrator, CRM/email agents, a CLI, and a FastAPI server (port 8000) so both scripts and frontends can drive the same workflows.
+Natural-language control over HubSpot contacts and deals with automated confirmation emails. The project includes:
 
----
-
-## Highlights
-- **LangChain orchestrator** – parses free text and calls the appropriate HubSpot/email tools.
-- **HubSpot agent** – contact and deal helpers with idempotent contact creation (409 conflicts reuse the existing record).
-- **Email agent** – Resend by default, with SendGrid and SMTP as plug-ins.
-- **Shared utilities** – httpx client with retries, structured logging, and simple error models.
+- **LangChain Orchestrator** – parses plain English, calls the right tools, and remembers the last eight turns for follow-ups.
+- **HubSpot Agent** – contact/deal helpers with idempotent contact creation and optional deal associations.
+- **Email Agent** – Resend by default or swap to SendGrid/SMTP.
+- **Async Utilities** – httpx client with retries, JSON logs.
+- **CLI + FastAPI backend** – run one-off commands or keep a server listening on port 8000.
+- **Minimal frontend** – pg-lang inspired UI that submits prompts to the backend.
 
 ```
 ai_crm_automation/
@@ -20,99 +19,105 @@ ai_crm_automation/
 │  ├─ api_client.py
 │  ├─ error_handler.py
 │  └─ logger.py
-├─ main.py              # CLI entry point
+├─ main.py              # CLI entry
 ├─ server.py            # FastAPI app (port 8000)
 ├─ config.example.json
-└─ README.md
+├─ README.md
+frontend/
+├─ index.html
+├─ script.js
+└─ styles.css
 ```
 
 ---
 
-## Required APIs and Keys
-| Service | Purpose | Keys |
-|---------|---------|------|
-| OpenAI  | LLM for intent parsing | `OPENAI_API_KEY` (optional `OPENAI_MODEL`) |
-| HubSpot | Contacts / deals       | `HUBSPOT_ACCESS_TOKEN` (Private App token) or `hubspot.api_key` |
-| Resend  | Confirmation emails    | `RESEND_API_KEY`, `email.from_email` verified |
-| SendGrid *(optional)* | Email provider | `SENDGRID_API_KEY` |
-| SMTP *(optional)* | Email fallback | host, port, username, password, `use_tls` |
+## Credentials Needed
+| Service | Purpose | Env / Config Keys |
+|---------|---------|-------------------|
+| OpenAI  | LangChain LLM | `OPENAI_API_KEY` (optional `OPENAI_MODEL`) |
+| HubSpot | Contacts & Deals | `HUBSPOT_ACCESS_TOKEN` (Private App token) or `hubspot.api_key` |
+| Resend  | Confirmation emails | `RESEND_API_KEY`, `EMAIL_FROM_EMAIL` verified |
+| SendGrid *(optional)* | Email alt | `SENDGRID_API_KEY` |
+| SMTP *(optional)* | Email fallback | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS` |
 
-Keep production secrets in `.env` (already in `.gitignore`) or your secret manager. Share only `.env.example` and `config.example.json`.
+Secrets live in `.env` or `config.json` (both gitignored). Share only `.env.example` / `config.example.json`.
 
 ---
 
 ## Prerequisites
-- Python 3.11 or 3.12
-- [`uv`](https://docs.astral.sh/uv/) for virtual environments and dependency installs
-- Accounts/API tokens for the providers you intend to use
+- Python 3.11 or 3.12 (3.13 not yet supported)
+- [`uv`](https://docs.astral.sh/uv/) package manager
+- Accounts/tokens for the providers you plan to use
 
 ---
 
 ## Setup
-1. Install runtime and dependencies
-   ```bash
-   uv python install 3.12
-   uv venv
-   .venv\Scripts\activate      # Windows
-   # source .venv/bin/activate  # macOS/Linux
-   uv sync
-   ```
-2. Configure secrets
-   - Copy `ai_crm_automation/config.example.json` to `ai_crm_automation/config.json` and add real values, **or**
-   - Create an `.env` from `.env.example` and optionally set `AI_CRM_CONFIG`.
-   - Minimum environment for Resend + HubSpot flow:
-     ```env
-     OPENAI_API_KEY=sk-...
-     HUBSPOT_ACCESS_TOKEN=pat-...
-     EMAIL_PROVIDER=resend
-     EMAIL_FROM_EMAIL=no-reply@haseebarshad.me
-     RESEND_API_KEY=re_...
-     ```
-
----
-
-## Running the CLI
 ```bash
-uv run --env-file .env python -m ai_crm_automation.main \
-  "Create contact Jane Doe with email jane@haseebarshad.me and add a deal worth 5000 dollars"
+uv python install 3.12            # or 3.11
+uv venv
+.venv\Scripts\activate            # Windows
+# source .venv/bin/activate       # macOS/Linux
+uv sync
 ```
-Omit the argument to enter interactive mode.
+
+Configure secrets:
+- Copy `ai_crm_automation/config.example.json` → `ai_crm_automation/config.json` and fill values **or**
+- Create `.env` from `.env.example` and optionally set `AI_CRM_CONFIG`.
+
+Minimum environment (Resend + HubSpot):
+```env
+OPENAI_API_KEY=sk-...
+HUBSPOT_ACCESS_TOKEN=pat-...
+EMAIL_PROVIDER=resend
+EMAIL_FROM_EMAIL=no-reply@haseebarshad.me
+RESEND_API_KEY=re_...
+```
 
 ---
 
-## Running the FastAPI service (port 8000)
+## Backend (FastAPI + CLI)
+Start the API:
 ```bash
 uv run --env-file .env uvicorn ai_crm_automation.server:app --host 0.0.0.0 --port 8000
 ```
 - `GET /health` → `{ "status": "ok" }`
-- `POST /run` → `{ "output": "..." }` with body `{ "prompt": "..." }`
+- `POST /run` with `{ "prompt": "..." }` → `{ "output": "..." }`
+- Orchestrator keeps the last 8 turns to maintain context.
 
-Keep the server running to support frontend clients or Postman collections.
+Run an ad hoc command:
+```bash
+uv run --env-file .env python -m ai_crm_automation.main \
+  "Create contact Jane Doe with email jane@haseebarshad.me and add a deal worth 5000 dollars"
+```
+Omit the argument for interactive mode.
 
 ---
 
-## Minimal frontend (pg-lang style)
-1. Start the backend as above.
-2. Serve the static files in `frontend/` (for example `npx serve frontend` or Live Server in VS Code).
-3. Open the served URL. The UI targets `http://localhost:8000` by default; override with `?api=https://your-host` if necessary.
-
-The interface is intentionally minimal: one column, light typography, three preset prompts, and a conversation stream.
+## Frontend (static)
+1. Ensure the backend is up on port 8000.
+2. Serve `frontend/` (examples):
+   ```bash
+   npx serve frontend
+   # or any static server (Live Server, python -m http.server, etc.)
+   ```
+3. Open the served URL. Buttons trigger `/run` calls immediately. To target a different backend, append `?api=https://your-host`.
+4. Responses append to the transcript and align with the backend’s conversation memory.
 
 ---
 
 ## Troubleshooting
-- **401 from HubSpot** – token missing scopes or expired. Regenerate the Private App token with contact/deal read-write scopes.
-- **404 on association** – contact or deal ID missing or association scopes not granted.
-- **Emails not delivered** – verify sender domains and recipient allowlists in Resend/SendGrid/SMTP.
-- **OpenAI quota errors** – adjust `OPENAI_MODEL` or review usage limits.
-- **Python 3.13 build issues** – use Python 3.11/3.12 until dependencies ship compatible wheels.
+- **401 HubSpot** – token missing scopes/expired (needs `crm.objects.contacts/deals.*` + associations).
+- **404 association** – contact/deal ID missing or app lacks association scope.
+- **Email missing** – verify sender domain in Resend/SendGrid/SMTP.
+- **OpenAI quota** – adjust `OPENAI_MODEL` or review usage limits.
+- **Python 3.13 errors** – use 3.11/3.12 until dependencies ship wheels.
 
 ---
 
-## Developer notes
-- `.gitignore` excludes `.env`, `config.json`, `.venv`, bytecode, and `uv.lock` so you can push safely.
-- Quick syntax check: `uv run --env-file .env python -m compileall ai_crm_automation`.
-- Extend or swap providers by keeping agent method signatures stable; the orchestrator only relies on tool names.
+## Developer Notes
+- `.gitignore` skips `.env`, `config.json`, `.venv`, bytecode, `uv.lock`.
+- Quick check: `uv run --env-file .env python -m compileall ai_crm_automation`.
+- Agents can be swapped by keeping tool signatures the same.
 
 ---
 

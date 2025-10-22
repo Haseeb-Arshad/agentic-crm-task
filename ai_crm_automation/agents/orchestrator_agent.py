@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Optional
+from collections import deque
+from typing import Deque, Optional
 
 from pydantic import BaseModel, EmailStr
 from langchain_openai import ChatOpenAI
 from langchain.tools import tool
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain.prompts import ChatPromptTemplate
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 from .hubspot_agent import HubSpotAgent, CreateContactInput, UpdateContactInput, CreateDealInput, UpdateDealInput
 from .email_agent import EmailAgent
@@ -16,6 +18,7 @@ from ..utils.error_handler import ApiError
 
 
 logger = get_logger(__name__)
+HISTORY_LIMIT = 8
 
 
 class OrchestratorConfig(BaseModel):
@@ -29,6 +32,7 @@ class OrchestratorAgent:
         self.email = email
         self.llm = ChatOpenAI(model=config.openai_model, api_key=config.openai_api_key, temperature=0)
         self.agent_executor = self._build_agent()
+        self.history: Deque[BaseMessage] = deque(maxlen=HISTORY_LIMIT)
 
     def _build_agent(self) -> AgentExecutor:
         # Define tools that wrap our async methods. LangChain tools can be async.
@@ -126,6 +130,7 @@ class OrchestratorAgent:
         )
         prompt = ChatPromptTemplate.from_messages([
             ("system", system),
+            ("placeholder", "{chat_history}"),
             ("human", "{input}"),
             ("placeholder", "{agent_scratchpad}"),
         ])
@@ -133,10 +138,13 @@ class OrchestratorAgent:
         return AgentExecutor(agent=agent, tools=tools, verbose=False)
 
     async def run(self, user_input: str) -> str:
+        history_messages = list(self.history)
         try:
-            result = await self.agent_executor.ainvoke({"input": user_input})
-            # LangChain standard return has "output"
-            return result.get("output", "Done")
+            result = await self.agent_executor.ainvoke({"input": user_input, "chat_history": history_messages})
+            output = result.get("output", "Done")
+            self.history.append(HumanMessage(content=user_input))
+            self.history.append(AIMessage(content=output))
+            return output
         except ApiError as e:
             detail = e.details
             if isinstance(detail, (dict, list)):
@@ -149,7 +157,13 @@ class OrchestratorAgent:
                 "Orchestrator run failed due to upstream API error",
                 extra={"status": e.status, "detail": detail_str},
             )
-            return f"API error {e.status}: {detail_str}. Please verify your credentials and permissions."
+            error_message = f"API error {e.status}: {detail_str}. Please verify your credentials and permissions."
+            self.history.append(HumanMessage(content=user_input))
+            self.history.append(AIMessage(content=error_message))
+            return error_message
         except Exception as e:
             logger.exception("Orchestrator run failed")
-            return f"Sorry, something went wrong: {str(e)}"
+            error_message = f"Sorry, something went wrong: {str(e)}"
+            self.history.append(HumanMessage(content=user_input))
+            self.history.append(AIMessage(content=error_message))
+            return error_message

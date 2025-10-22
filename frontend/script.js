@@ -75,9 +75,7 @@ const runPrompt = async (prompt) => {
   }
 };
 
-const handleSubmit = async (event) => {
-  event.preventDefault();
-  const prompt = input.value.trim();
+const processPrompt = async (prompt) => {
   if (!prompt) {
     return;
   }
@@ -102,7 +100,10 @@ const handleSubmit = async (event) => {
   }
 };
 
-form.addEventListener("submit", handleSubmit);
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  void processPrompt(input.value.trim());
+});
 
 input.addEventListener("input", () => {
   sendButton.disabled = input.value.trim().length === 0;
@@ -119,7 +120,7 @@ presets.addEventListener("click", (event) => {
   input.value = prompt;
   sendButton.disabled = false;
   autoResize();
-  input.focus();
+  void processPrompt(prompt.trim());
 });
 
 // enable immediate focus
